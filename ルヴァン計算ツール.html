@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ルヴァン種 計算ツール</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
+      background: #faf8f4;
+      color: #3a3028;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #5c4a32;
+      color: #fff8ee;
+      padding: 20px 28px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.05em; }
+    header span { font-size: 1.6rem; }
+
+    .container { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
+
+    /* ─── セクション共通 ─── */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .card-header {
+      background: #f0e9de;
+      padding: 12px 20px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #5c4a32;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ─── 注文入力テーブル ─── */
+    .order-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .order-table th {
+      background: #faf8f4;
+      padding: 10px 16px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #7a6a58;
+      border-bottom: 2px solid #ede5d8;
+      text-align: center;
+    }
+    .order-table th:first-child { text-align: left; }
+    .order-table td {
+      padding: 10px 16px;
+      border-bottom: 1px solid #f0ebe3;
+      font-size: 0.9rem;
+      vertical-align: middle;
+    }
+    .order-table tr:last-child td { border-bottom: none; }
+    .order-table tr:hover td { background: #fdf9f4; }
+
+    .bread-name { font-weight: 600; }
+    .batch-info { font-size: 0.78rem; color: #9a8878; }
+
+    input[type="number"] {
+      width: 72px;
+      padding: 6px 10px;
+      border: 2px solid #ddd6ca;
+      border-radius: 8px;
+      font-size: 1rem;
+      text-align: center;
+      color: #3a3028;
+      background: #fdfbf8;
+      transition: border-color 0.15s;
+      -moz-appearance: textfield;
+    }
+    input[type="number"]:focus {
+      outline: none;
+      border-color: #b07a4a;
+      background: #fff;
+    }
+    input[type="number"]::-webkit-inner-spin-button { opacity: 0.4; }
+
+    .td-center { text-align: center; }
+    .td-right  { text-align: right; }
+
+    .batches-badge {
+      display: inline-block;
+      background: #ede5d8;
+      color: #5c4a32;
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    .batches-badge.active { background: #b07a4a; color: #fff; }
+
+    .levain-cell { font-weight: 600; color: #7a4e28; }
+    .levain-zero { color: #ccc; }
+
+    .section-label {
+      font-size: 0.75rem;
+      color: #9a8878;
+      margin-bottom: 2px;
+    }
+
+    /* ─── 合計パネル ─── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      padding: 20px;
+    }
+    @media (max-width: 540px) { .summary-grid { grid-template-columns: 1fr; } }
+
+    .summary-box {
+      background: #faf8f4;
+      border-radius: 10px;
+      padding: 16px 20px;
+      border: 1.5px solid #ede5d8;
+    }
+    .summary-box.highlight {
+      background: #5c4a32;
+      border-color: #5c4a32;
+      color: #fff8ee;
+    }
+    .summary-box label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #7a6a58;
+      letter-spacing: 0.04em;
+      display: block;
+      margin-bottom: 6px;
+    }
+    .summary-box.highlight label { color: #d4b896; }
+    .summary-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #3a3028;
+    }
+    .summary-box.highlight .summary-value { color: #fff; }
+    .summary-unit { font-size: 1rem; font-weight: 400; margin-left: 4px; }
+
+    /* ─── 設定エリア ─── */
+    .settings-area {
+      padding: 16px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-end;
+    }
+    .setting-item { display: flex; flex-direction: column; gap: 6px; }
+    .setting-item label { font-size: 0.8rem; font-weight: 700; color: #5c4a32; }
+
+    .round-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+    .round-btn {
+      padding: 7px 14px;
+      border-radius: 20px;
+      border: 2px solid #ddd6ca;
+      background: #faf8f4;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #7a6a58;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .round-btn:hover { border-color: #b07a4a; color: #b07a4a; }
+    .round-btn.active { background: #b07a4a; border-color: #b07a4a; color: #fff; }
+
+    .next-day-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .toggle-switch {
+      position: relative; width: 44px; height: 24px;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #ddd6ca; border-radius: 24px;
+      transition: 0.2s;
+    }
+    .toggle-slider:before {
+      position: absolute; content: "";
+      height: 18px; width: 18px;
+      left: 3px; bottom: 3px;
+      background: #fff; border-radius: 50%;
+      transition: 0.2s;
+    }
+    input:checked + .toggle-slider { background: #b07a4a; }
+    input:checked + .toggle-slider:before { transform: translateX(20px); }
+    .toggle-label { font-size: 0.88rem; color: #3a3028; }
+
+    /* ─── 継ぎレシピ ─── */
+    .recipe-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 20px;
+    }
+    @media (max-width: 540px) { .recipe-grid { grid-template-columns: 1fr; } }
+
+    .recipe-item {
+      background: #faf8f4;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+      border: 1.5px solid #ede5d8;
+    }
+    .recipe-item.total-item {
+      background: #e8f4e8;
+      border-color: #a8c8a8;
+    }
+    .recipe-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #7a6a58;
+      margin-bottom: 8px;
+    }
+    .recipe-value {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #3a3028;
+    }
+    .recipe-unit { font-size: 1rem; font-weight: 400; }
+
+    .recipe-notes {
+      padding: 0 20px 20px;
+      font-size: 0.82rem;
+      color: #7a6a58;
+      line-height: 1.7;
+    }
+    .recipe-notes strong { color: #5c4a32; }
+
+    /* ─── ゼロ注文時のメッセージ ─── */
+    .empty-msg {
+      text-align: center;
+      padding: 32px;
+      color: #b0a090;
+      font-size: 0.9rem;
+    }
+
+    /* ─── フッター ─── */
+    .category-row td {
+      background: #faf2e8;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #9a7a58;
+      padding: 6px 16px;
+      letter-spacing: 0.05em;
+    }
+
+    .divider { border: none; border-top: 2px solid #ede5d8; margin: 4px 0; }
+  </style>
+</head>
+<body>
+
+<header>
+  <span>🍞</span>
+  <h1>ルヴァン種 計算ツール</h1>
+</header>
+
+<div class="container">
+
+  <!-- 注文入力 -->
+  <div class="card">
+    <div class="card-header">📋 注文数の入力</div>
+    <table class="order-table">
+      <thead>
+        <tr>
+          <th>パンの種類</th>
+          <th>注文数（個）</th>
+          <th>仕込み回数</th>
+          <th>ルヴァン種</th>
+        </tr>
+      </thead>
+      <tbody id="order-tbody">
+        <!-- JSで生成 -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 合計 -->
+  <div class="card">
+    <div class="card-header">⚖️ 合計</div>
+    <div class="summary-grid">
+      <div class="summary-box">
+        <label>仕込み用ルヴァン種（合計）</label>
+        <div class="summary-value" id="total-baking">0<span class="summary-unit">g</span></div>
+      </div>
+      <div class="summary-box">
+        <label>翌日の前種分</label>
+        <div class="summary-value" id="total-nextday-display">0<span class="summary-unit">g</span></div>
+      </div>
+      <div class="summary-box highlight" style="grid-column: span 2;">
+        <label>▶ 今日作るルヴァン種の目標量</label>
+        <div class="summary-value" id="total-target">0<span class="summary-unit">g</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 設定 -->
+  <div class="card">
+    <div class="card-header">⚙️ 設定</div>
+    <div class="settings-area">
+      <div class="setting-item">
+        <label>翌日の前種を含める</label>
+        <div class="next-day-toggle">
+          <label class="toggle-switch">
+            <input type="checkbox" id="include-nextday" checked>
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label" id="nextday-label">含める</span>
+        </div>
+      </div>
+      <div class="setting-item">
+        <label>切り上げ単位</label>
+        <div class="round-buttons">
+          <button class="round-btn" data-round="0">なし</button>
+          <button class="round-btn active" data-round="50">50g</button>
+          <button class="round-btn" data-round="100">100g</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- スペルト継ぎレシピ -->
+  <div class="card">
+    <div class="card-header">🌾 スペルト継ぎレシピ（自動スケール）</div>
+    <div class="recipe-grid">
+      <div class="recipe-item">
+        <div class="recipe-label">スペルト粉</div>
+        <div class="recipe-value" id="r-flour">–<span class="recipe-unit">g</span></div>
+      </div>
+      <div class="recipe-item">
+        <div class="recipe-label">前種（ルヴァン種）</div>
+        <div class="recipe-value" id="r-starter">–<span class="recipe-unit">g</span></div>
+      </div>
+      <div class="recipe-item">
+        <div class="recipe-label">水</div>
+        <div class="recipe-value" id="r-water">–<span class="recipe-unit">g</span></div>
+      </div>
+      <div class="recipe-item total-item" style="grid-column: span 3;">
+        <div class="recipe-label">合計（できあがり量）</div>
+        <div class="recipe-value" id="r-total">–<span class="recipe-unit">g</span></div>
+      </div>
+    </div>
+    <div class="recipe-notes">
+      <strong>配合比率：</strong>粉 100% / 前種 50% / 水 100%　|
+      <strong>こね上げ温度：</strong>25〜27℃　|
+      <strong>発酵温度：</strong>28〜30℃　|
+      <strong>発酵時間：</strong>2〜4時間<br>
+      ※ 仕込み後に <strong id="r-reserve">–g</strong> を前種として取り分け、冷蔵保管してください。残り <strong id="r-forbaking">–g</strong> をパン生地に使用します。
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// パンマスタデータ
+// ─────────────────────────────────────────────
+const breads = [
+  // [ 表示名, バッチサイズ, ルヴァン種/バッチg, カテゴリ ]
+  ['キタノカオリ',     3,  86, '食パン系'],
+  ['プレーン',         3,  86, '食パン系'],
+  ['カムット',         3,  86, '食パン系'],
+  ['スペルト黒ゴマ',   3,  86, '食パン系'],
+  ['スペルト',         3,  86, '食パン系'],
+  ['オートミール',     3,  90, '食パン系'],
+  ['ライ麦くるみ',     3,  85, '食パン系'],
+  ['ココナツ',         3,  85, '食パン系'],
+  ['豆乳たんぽぽ',     3,  86, '食パン系'],
+  ['まろやか',         5, 110, 'フルーツ・スペシャル系'],
+  ['フルーツナッツ',   4,  85, 'フルーツ・スペシャル系'],
+  ['ジンジャーチャイ', 4,  85, 'フルーツ・スペシャル系'],
+  ['なつめ ココナツ',  5, 100, 'フルーツ・スペシャル系'],
+  ['シナモン',         4,  90, 'フルーツ・スペシャル系'],
+  ['あんずクコ',       4,  90, 'フルーツ・スペシャル系'],
+  ['キャロブいちじく', 4,  90, 'フルーツ・スペシャル系'],
+  ['カレンズ',         4,  90, 'フルーツ・スペシャル系'],
+  ['カムットレーズン', 4,  90, 'フルーツ・スペシャル系'],
+  ['カムットスコーン', 15, 64, 'スコーン'],
+  ['アインコーンスコーン', 15, 64, 'スコーン'],
+];
+
+// ─────────────────────────────────────────────
+// テーブル生成
+// ─────────────────────────────────────────────
+const tbody = document.getElementById('order-tbody');
+let lastCategory = '';
+
+breads.forEach((b, i) => {
+  const [name, batchSize, levainPerBatch, category] = b;
+
+  if (category !== lastCategory) {
+    const catRow = document.createElement('tr');
+    catRow.className = 'category-row';
+    catRow.innerHTML = `<td colspan="4">── ${category}</td>`;
+    tbody.appendChild(catRow);
+    lastCategory = category;
+  }
+
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>
+      <div class="bread-name">${name}</div>
+      <div class="batch-info">1仕込み = ${batchSize}個 / ルヴァン${levainPerBatch}g</div>
+    </td>
+    <td class="td-center">
+      <input type="number" id="order-${i}" min="0" value="0" onchange="calculate()">
+    </td>
+    <td class="td-center"><span class="batches-badge" id="batches-${i}">–</span></td>
+    <td class="td-right"><span id="levain-${i}" class="levain-zero">–</span></td>
+  `;
+  tbody.appendChild(tr);
+});
+
+// ─────────────────────────────────────────────
+// 計算
+// ─────────────────────────────────────────────
+let roundUnit = 50;
+let includeNextDay = true;
+
+function calculate() {
+  let totalBaking = 0;
+
+  breads.forEach((b, i) => {
+    const [name, batchSize, levainPerBatch] = b;
+    const ordered = parseInt(document.getElementById(`order-${i}`).value) || 0;
+    const batches = ordered > 0 ? Math.ceil(ordered / batchSize) : 0;
+    const levain = batches * levainPerBatch;
+
+    totalBaking += levain;
+
+    const batchEl = document.getElementById(`batches-${i}`);
+    const levainEl = document.getElementById(`levain-${i}`);
+
+    batchEl.textContent = batches > 0 ? `${batches}回` : '–';
+    batchEl.className = `batches-badge${batches > 0 ? ' active' : ''}`;
+
+    if (levain > 0) {
+      levainEl.textContent = `${levain}g`;
+      levainEl.className = 'levain-cell';
+    } else {
+      levainEl.textContent = '–';
+      levainEl.className = 'levain-zero';
+    }
+  });
+
+  // 翌日の前種 = 今日の仕込み量を作るのに必要な前種量（同量を確保）
+  // スペルト継ぎ比率: 前種は全体の 1/5
+  // 翌日も同じ量が必要と仮定して、totalBaking の前種分 = totalBaking × 0.2
+  const nextDayStarter = includeNextDay ? Math.round(totalBaking * 0.2) : 0;
+
+  const rawTarget = totalBaking + nextDayStarter;
+
+  let target = rawTarget;
+  if (roundUnit > 0 && rawTarget > 0) {
+    target = Math.ceil(rawTarget / roundUnit) * roundUnit;
+  }
+
+  // 表示更新
+  document.getElementById('total-baking').innerHTML = `${totalBaking}<span class="summary-unit">g</span>`;
+  document.getElementById('total-nextday-display').innerHTML = `${nextDayStarter}<span class="summary-unit">g</span>`;
+  document.getElementById('total-target').innerHTML = `${target}<span class="summary-unit">g</span>`;
+
+  updateRecipe(target, totalBaking);
+}
+
+function updateRecipe(target, baking) {
+  if (target === 0) {
+    ['r-flour','r-starter','r-water','r-total','r-reserve','r-forbaking'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = id.startsWith('r-reserve') || id.startsWith('r-forbaking') ? '–g' : `–<span class="recipe-unit">g</span>`;
+    });
+    return;
+  }
+
+  // 比率: 粉2 : 前種1 : 水2 = 合計5
+  const flour   = Math.round(target * 2 / 5);
+  const starter = Math.round(target * 1 / 5);
+  const water   = target - flour - starter; // 残り（誤差吸収）
+  const reserve = target - baking; // 取り分け量
+
+  document.getElementById('r-flour').innerHTML   = `${flour}<span class="recipe-unit">g</span>`;
+  document.getElementById('r-starter').innerHTML = `${starter}<span class="recipe-unit">g</span>`;
+  document.getElementById('r-water').innerHTML   = `${water}<span class="recipe-unit">g</span>`;
+  document.getElementById('r-total').innerHTML   = `${target}<span class="recipe-unit">g</span>`;
+  document.getElementById('r-reserve').textContent   = `${reserve}g`;
+  document.getElementById('r-forbaking').textContent = `${baking}g`;
+}
+
+// ─────────────────────────────────────────────
+// 切り上げボタン
+// ─────────────────────────────────────────────
+document.querySelectorAll('.round-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.round-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    roundUnit = parseInt(btn.dataset.round);
+    calculate();
+  });
+});
+
+// ─────────────────────────────────────────────
+// 翌日前種トグル
+// ─────────────────────────────────────────────
+document.getElementById('include-nextday').addEventListener('change', function() {
+  includeNextDay = this.checked;
+  document.getElementById('nextday-label').textContent = includeNextDay ? '含める' : '含めない';
+  calculate();
+});
+
+// 初期計算
+calculate();
+</script>
+</body>
+</html>
